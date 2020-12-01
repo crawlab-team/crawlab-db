@@ -1,4 +1,4 @@
-module crawlab-db
+module github.com/crawlab-team/crawlab-db
 
 go 1.13
 
