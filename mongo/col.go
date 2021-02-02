@@ -15,6 +15,9 @@ type ColInterface interface {
 	UpdateId(id primitive.ObjectID, update interface{}) (err error)
 	Update(query bson.M, update interface{}) (err error)
 	UpdateWithOptions(query bson.M, update interface{}, opts *options.UpdateOptions) (err error)
+	ReplaceId(id primitive.ObjectID, doc interface{}) (err error)
+	Replace(query bson.M, doc interface{}) (err error)
+	ReplaceWithOptions(query bson.M, doc interface{}, opts *options.ReplaceOptions) (err error)
 	DeleteId(id primitive.ObjectID) (err error)
 	Delete(query bson.M) (err error)
 	DeleteWithOptions(query bson.M, opts *options.DeleteOptions) (err error)
@@ -79,7 +82,31 @@ func (col *Col) Update(query bson.M, update interface{}) (err error) {
 }
 
 func (col *Col) UpdateWithOptions(query bson.M, update interface{}, opts *options.UpdateOptions) (err error) {
-	_, err = col.c.UpdateMany(col.ctx, query, update, opts)
+	if opts == nil {
+		_, err = col.c.UpdateMany(col.ctx, query, update)
+	} else {
+		_, err = col.c.UpdateMany(col.ctx, query, update, opts)
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (col *Col) ReplaceId(id primitive.ObjectID, doc interface{}) (err error) {
+	return col.Replace(bson.M{"_id": id}, doc)
+}
+
+func (col *Col) Replace(query bson.M, doc interface{}) (err error) {
+	return col.ReplaceWithOptions(query, doc, nil)
+}
+
+func (col *Col) ReplaceWithOptions(query bson.M, doc interface{}, opts *options.ReplaceOptions) (err error) {
+	if opts == nil {
+		_, err = col.c.ReplaceOne(col.ctx, query, doc)
+	} else {
+		_, err = col.c.ReplaceOne(col.ctx, query, doc, opts)
+	}
 	if err != nil {
 		return err
 	}
@@ -99,7 +126,11 @@ func (col *Col) Delete(query bson.M) (err error) {
 }
 
 func (col *Col) DeleteWithOptions(query bson.M, opts *options.DeleteOptions) (err error) {
-	_, err = col.c.DeleteMany(col.ctx, query, opts)
+	if opts == nil {
+		_, err = col.c.DeleteMany(col.ctx, query)
+	} else {
+		_, err = col.c.DeleteMany(col.ctx, query, opts)
+	}
 	if err != nil {
 		return err
 	}

@@ -155,6 +155,58 @@ func TestCol_Update(t *testing.T) {
 	cleanupColTest(to)
 }
 
+func TestCol_ReplaceId(t *testing.T) {
+	to, err := setupColTest()
+	require.Nil(t, err)
+
+	id, err := to.col.Insert(bson.M{"key": "old-value"})
+	require.Nil(t, err)
+
+	var doc map[string]interface{}
+	res, err := to.col.FindId(id)
+	require.Nil(t, err)
+	err = res.One(&doc)
+	require.Nil(t, err)
+	doc["key"] = "new-value"
+
+	err = to.col.ReplaceId(id, doc)
+	require.Nil(t, err)
+
+	res, err = to.col.FindId(id)
+	require.Nil(t, err)
+	err = res.One(&doc)
+	require.Nil(t, err)
+	require.Equal(t, "new-value", doc["key"])
+
+	cleanupColTest(to)
+}
+
+func TestCol_Replace(t *testing.T) {
+	to, err := setupColTest()
+	require.Nil(t, err)
+
+	id, err := to.col.Insert(bson.M{"key": "old-value"})
+	require.Nil(t, err)
+
+	var doc map[string]interface{}
+	res, err := to.col.FindId(id)
+	require.Nil(t, err)
+	err = res.One(&doc)
+	require.Nil(t, err)
+	doc["key"] = "new-value"
+
+	err = to.col.Replace(bson.M{"key": "old-value"}, doc)
+	require.Nil(t, err)
+
+	res, err = to.col.FindId(id)
+	require.Nil(t, err)
+	err = res.One(&doc)
+	require.Nil(t, err)
+	require.Equal(t, "new-value", doc["key"])
+
+	cleanupColTest(to)
+}
+
 func TestCol_DeleteId(t *testing.T) {
 	to, err := setupColTest()
 	require.Nil(t, err)
