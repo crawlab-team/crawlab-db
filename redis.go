@@ -39,6 +39,31 @@ func NewRedisClient() *Redis {
 	return &Redis{pool: NewRedisPool()}
 }
 
+func (r *Redis) Del(collection string) error {
+	c := r.pool.Get()
+	defer Close(c)
+
+	if _, err := c.Do("DEL", collection); err != nil {
+		log.Error(err.Error())
+		debug.PrintStack()
+		return err
+	}
+	return nil
+}
+
+func (r *Redis) LLen(collection string) (int, error) {
+	c := r.pool.Get()
+	defer Close(c)
+
+	value, err := redis.Int(c.Do("LLEN", collection))
+	if err != nil {
+		log.Error(err.Error())
+		debug.PrintStack()
+		return 0, err
+	}
+	return value, nil
+}
+
 func (r *Redis) RPush(collection string, value interface{}) error {
 	c := r.pool.Get()
 	defer Close(c)
