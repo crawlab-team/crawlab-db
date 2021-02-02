@@ -1,9 +1,10 @@
-package db
+package redis
 
 import (
 	"errors"
 	"github.com/apex/log"
 	"github.com/cenkalti/backoff/v4"
+	"github.com/crawlab-team/crawlab-db/utils"
 	"github.com/gomodule/redigo/redis"
 	"github.com/spf13/viper"
 	"reflect"
@@ -41,7 +42,7 @@ func NewRedisClient() *Redis {
 
 func (r *Redis) Del(collection string) error {
 	c := r.pool.Get()
-	defer Close(c)
+	defer utils.Close(c)
 
 	if _, err := c.Do("DEL", collection); err != nil {
 		log.Error(err.Error())
@@ -53,7 +54,7 @@ func (r *Redis) Del(collection string) error {
 
 func (r *Redis) LLen(collection string) (int, error) {
 	c := r.pool.Get()
-	defer Close(c)
+	defer utils.Close(c)
 
 	value, err := redis.Int(c.Do("LLEN", collection))
 	if err != nil {
@@ -66,7 +67,7 @@ func (r *Redis) LLen(collection string) (int, error) {
 
 func (r *Redis) RPush(collection string, value interface{}) error {
 	c := r.pool.Get()
-	defer Close(c)
+	defer utils.Close(c)
 
 	if _, err := c.Do("RPUSH", collection, value); err != nil {
 		log.Error(err.Error())
@@ -78,7 +79,7 @@ func (r *Redis) RPush(collection string, value interface{}) error {
 
 func (r *Redis) LPush(collection string, value interface{}) error {
 	c := r.pool.Get()
-	defer Close(c)
+	defer utils.Close(c)
 
 	if _, err := c.Do("RPUSH", collection, value); err != nil {
 		log.Error(err.Error())
@@ -90,7 +91,7 @@ func (r *Redis) LPush(collection string, value interface{}) error {
 
 func (r *Redis) LPop(collection string) (string, error) {
 	c := r.pool.Get()
-	defer Close(c)
+	defer utils.Close(c)
 
 	value, err2 := redis.String(c.Do("LPOP", collection))
 	if err2 != nil {
@@ -101,7 +102,7 @@ func (r *Redis) LPop(collection string) (string, error) {
 
 func (r *Redis) HSet(collection string, key string, value string) error {
 	c := r.pool.Get()
-	defer Close(c)
+	defer utils.Close(c)
 
 	if _, err := c.Do("HSET", collection, key, value); err != nil {
 		log.Error(err.Error())
@@ -112,13 +113,13 @@ func (r *Redis) HSet(collection string, key string, value string) error {
 }
 func (r *Redis) Ping() error {
 	c := r.pool.Get()
-	defer Close(c)
+	defer utils.Close(c)
 	_, err2 := redis.String(c.Do("PING"))
 	return err2
 }
 func (r *Redis) HGet(collection string, key string) (string, error) {
 	c := r.pool.Get()
-	defer Close(c)
+	defer utils.Close(c)
 	value, err2 := redis.String(c.Do("HGET", collection, key))
 	if err2 != nil && err2 != redis.ErrNil {
 		log.Error(err2.Error())
@@ -130,7 +131,7 @@ func (r *Redis) HGet(collection string, key string) (string, error) {
 
 func (r *Redis) HDel(collection string, key string) error {
 	c := r.pool.Get()
-	defer Close(c)
+	defer utils.Close(c)
 
 	if _, err := c.Do("HDEL", collection, key); err != nil {
 		log.Error(err.Error())
@@ -141,7 +142,7 @@ func (r *Redis) HDel(collection string, key string) error {
 }
 func (r *Redis) HScan(collection string) (results []string, err error) {
 	c := r.pool.Get()
-	defer Close(c)
+	defer utils.Close(c)
 	var (
 		cursor int64
 		items  []string
@@ -170,7 +171,7 @@ func (r *Redis) HScan(collection string) (results []string, err error) {
 }
 func (r *Redis) HKeys(collection string) ([]string, error) {
 	c := r.pool.Get()
-	defer Close(c)
+	defer utils.Close(c)
 
 	value, err2 := redis.Strings(c.Do("HKEYS", collection))
 	if err2 != nil {
@@ -186,7 +187,7 @@ func (r *Redis) BRPop(collection string, timeout int) (string, error) {
 		timeout = 60
 	}
 	c := r.pool.Get()
-	defer Close(c)
+	defer utils.Close(c)
 
 	values, err := redis.Strings(c.Do("BRPOP", collection, timeout))
 	if err != nil {
@@ -254,7 +255,7 @@ func (r *Redis) getLockKey(lockKey string) string {
 // 获得锁
 func (r *Redis) Lock(lockKey string) (int64, error) {
 	c := r.pool.Get()
-	defer Close(c)
+	defer utils.Close(c)
 	lockKey = r.getLockKey(lockKey)
 
 	ts := time.Now().Unix()
@@ -273,7 +274,7 @@ func (r *Redis) Lock(lockKey string) (int64, error) {
 
 func (r *Redis) UnLock(lockKey string, value int64) {
 	c := r.pool.Get()
-	defer Close(c)
+	defer utils.Close(c)
 	lockKey = r.getLockKey(lockKey)
 
 	getValue, err := redis.Int64(c.Do("GET", lockKey))
@@ -304,13 +305,13 @@ func (r *Redis) UnLock(lockKey string, value int64) {
 func (r *Redis) MemoryStats() (stats map[string]int64, err error) {
 	stats = map[string]int64{}
 	c := r.pool.Get()
-	defer Close(c)
+	defer utils.Close(c)
 	values, err := redis.Values(c.Do("MEMORY", "STATS"))
 	for i, v := range values {
 		t := reflect.TypeOf(v)
 		if t.Kind() == reflect.Slice {
 			vc, _ := redis.String(v, err)
-			if ContainsString(MemoryStatsMetrics, vc) {
+			if utils.ContainsString(MemoryStatsMetrics, vc) {
 				stats[vc], _ = redis.Int64(values[i+1], err)
 			}
 		}
