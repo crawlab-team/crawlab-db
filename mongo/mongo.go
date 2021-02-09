@@ -69,8 +69,6 @@ func InitMongo() error {
 			}
 		}
 
-		// construct mongo client
-
 		// attempt to connect with retry
 		bp := backoff.NewExponentialBackOff()
 		var err error
