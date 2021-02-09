@@ -66,10 +66,8 @@ func TestCol_Insert(t *testing.T) {
 	require.Nil(t, err)
 	require.IsType(t, primitive.ObjectID{}, id)
 
-	res, err := to.col.FindId(id)
-	require.Nil(t, err)
 	var doc map[string]string
-	err = res.One(&doc)
+	err = to.col.FindId(id).One(&doc)
 	require.Nil(t, err)
 	require.Equal(t, doc["key"], "value")
 
@@ -89,10 +87,8 @@ func TestCol_InsertMany(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, n, len(ids))
 
-	res, err := to.col.Find(nil, &FindOptions{Sort: bson.M{"_id": 1}})
-	require.Nil(t, err)
 	var resDocs []map[string]string
-	err = res.All(&resDocs)
+	err = to.col.Find(nil, &FindOptions{Sort: bson.M{"_id": 1}}).All(&resDocs)
 	require.Nil(t, err)
 	require.Equal(t, n, len(resDocs))
 	for i, doc := range resDocs {
@@ -117,9 +113,7 @@ func TestCol_UpdateId(t *testing.T) {
 	require.Nil(t, err)
 
 	var doc map[string]string
-	res, err := to.col.FindId(id)
-	require.Nil(t, err)
-	err = res.One(&doc)
+	err = to.col.FindId(id).One(&doc)
 	require.Nil(t, err)
 	require.Equal(t, "new-value", doc["key"])
 
@@ -144,9 +138,7 @@ func TestCol_Update(t *testing.T) {
 	require.Nil(t, err)
 
 	var resDocs []map[string]string
-	res, err := to.col.Find(nil, &FindOptions{Sort: bson.M{"_id": 1}})
-	require.Nil(t, err)
-	err = res.All(&resDocs)
+	err = to.col.Find(nil, &FindOptions{Sort: bson.M{"_id": 1}}).All(&resDocs)
 	require.Nil(t, err)
 	for _, doc := range resDocs {
 		require.Equal(t, "new-value", doc["key"])
@@ -163,18 +155,14 @@ func TestCol_ReplaceId(t *testing.T) {
 	require.Nil(t, err)
 
 	var doc map[string]interface{}
-	res, err := to.col.FindId(id)
-	require.Nil(t, err)
-	err = res.One(&doc)
+	err = to.col.FindId(id).One(&doc)
 	require.Nil(t, err)
 	doc["key"] = "new-value"
 
 	err = to.col.ReplaceId(id, doc)
 	require.Nil(t, err)
 
-	res, err = to.col.FindId(id)
-	require.Nil(t, err)
-	err = res.One(&doc)
+	err = to.col.FindId(id).One(doc)
 	require.Nil(t, err)
 	require.Equal(t, "new-value", doc["key"])
 
@@ -189,18 +177,14 @@ func TestCol_Replace(t *testing.T) {
 	require.Nil(t, err)
 
 	var doc map[string]interface{}
-	res, err := to.col.FindId(id)
-	require.Nil(t, err)
-	err = res.One(&doc)
+	err = to.col.FindId(id).One(&doc)
 	require.Nil(t, err)
 	doc["key"] = "new-value"
 
 	err = to.col.Replace(bson.M{"key": "old-value"}, doc)
 	require.Nil(t, err)
 
-	res, err = to.col.FindId(id)
-	require.Nil(t, err)
-	err = res.One(&doc)
+	err = to.col.FindId(id).One(&doc)
 	require.Nil(t, err)
 	require.Equal(t, "new-value", doc["key"])
 
@@ -262,9 +246,7 @@ func TestCol_FindId(t *testing.T) {
 	require.Nil(t, err)
 
 	var doc map[string]string
-	res, err := to.col.FindId(id)
-	require.Nil(t, err)
-	err = res.One(&doc)
+	err = to.col.FindId(id).One(&doc)
 	require.Nil(t, err)
 	require.Equal(t, "value", doc["key"])
 
@@ -284,49 +266,37 @@ func TestCol_Find(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, n, len(ids))
 
-	res, err := to.col.Find(nil, nil)
-	require.Nil(t, err)
-	err = res.All(&docs)
+	err = to.col.Find(nil, nil).All(&docs)
 	require.Nil(t, err)
 	require.Equal(t, n, len(docs))
 
-	res, err = to.col.Find(bson.M{"key": bson.M{"$gte": fmt.Sprintf("value-%d", 5)}}, nil)
-	require.Nil(t, err)
-	err = res.All(&docs)
+	err = to.col.Find(bson.M{"key": bson.M{"$gte": fmt.Sprintf("value-%d", 5)}}, nil).All(&docs)
 	require.Nil(t, err)
 	require.Equal(t, n-5, len(docs))
 
-	res, err = to.col.Find(nil, &FindOptions{
+	err = to.col.Find(nil, &FindOptions{
 		Skip: 5,
-	})
-	require.Nil(t, err)
-	err = res.All(&docs)
+	}).All(&docs)
 	require.Nil(t, err)
 	require.Equal(t, n-5, len(docs))
 
-	res, err = to.col.Find(nil, &FindOptions{
+	err = to.col.Find(nil, &FindOptions{
 		Limit: 5,
-	})
-	require.Nil(t, err)
-	err = res.All(&docs)
+	}).All(&docs)
 	require.Nil(t, err)
 	require.Equal(t, 5, len(docs))
 
 	var resDocs []map[string]string
-	res, err = to.col.Find(nil, &FindOptions{
+	err = to.col.Find(nil, &FindOptions{
 		Sort: bson.M{"key": 1},
-	})
-	require.Nil(t, err)
-	err = res.All(&resDocs)
+	}).All(&resDocs)
 	require.Nil(t, err)
 	require.Greater(t, len(resDocs), 0)
 	require.Equal(t, "value-0", resDocs[0]["key"])
 
-	res, err = to.col.Find(nil, &FindOptions{
+	err = to.col.Find(nil, &FindOptions{
 		Sort: bson.M{"key": -1},
-	})
-	require.Nil(t, err)
-	err = res.All(&resDocs)
+	}).All(&resDocs)
 	require.Nil(t, err)
 	require.Greater(t, len(resDocs), 0)
 	require.Equal(t, fmt.Sprintf("value-%d", n-1), resDocs[0]["key"])

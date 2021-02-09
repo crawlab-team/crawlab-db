@@ -21,8 +21,8 @@ type ColInterface interface {
 	DeleteId(id primitive.ObjectID) (err error)
 	Delete(query bson.M) (err error)
 	DeleteWithOptions(query bson.M, opts *options.DeleteOptions) (err error)
-	Find(query bson.M, opts *FindOptions) (fr *FindResult, err error)
-	FindId(id primitive.ObjectID) (fr *FindResult, err error)
+	Find(query bson.M, opts *FindOptions) (fr *FindResult)
+	FindId(id primitive.ObjectID) (fr *FindResult)
 	Count(query bson.M) (total int, err error)
 	CreateIndex(indexModel mongo.IndexModel) (err error)
 	CreateIndexes(indexModels []mongo.IndexModel) (err error)
@@ -137,7 +137,7 @@ func (col *Col) DeleteWithOptions(query bson.M, opts *options.DeleteOptions) (er
 	return nil
 }
 
-func (col *Col) Find(query bson.M, opts *FindOptions) (fr *FindResult, err error) {
+func (col *Col) Find(query bson.M, opts *FindOptions) (fr *FindResult) {
 	_opts := &options.FindOptions{}
 	if opts != nil {
 		if opts.Skip != 0 {
@@ -154,25 +154,31 @@ func (col *Col) Find(query bson.M, opts *FindOptions) (fr *FindResult, err error
 	}
 	cur, err := col.c.Find(col.ctx, query, _opts)
 	if err != nil {
-		return nil, err
+		return &FindResult{
+			col: col,
+			err: err,
+		}
 	}
 	fr = &FindResult{
 		col: col,
 		cur: cur,
 	}
-	return fr, nil
+	return fr
 }
 
-func (col *Col) FindId(id primitive.ObjectID) (fr *FindResult, err error) {
+func (col *Col) FindId(id primitive.ObjectID) (fr *FindResult) {
 	res := col.c.FindOne(col.ctx, bson.M{"_id": id})
 	if res.Err() != nil {
-		return nil, res.Err()
+		return &FindResult{
+			col: col,
+			err: res.Err(),
+		}
 	}
 	fr = &FindResult{
 		col: col,
 		res: res,
 	}
-	return fr, nil
+	return fr
 }
 
 func (col *Col) Count(query bson.M) (total int, err error) {

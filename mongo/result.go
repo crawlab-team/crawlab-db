@@ -14,9 +14,13 @@ type FindResult struct {
 	col *Col
 	res *mongo.SingleResult
 	cur *mongo.Cursor
+	err error
 }
 
 func (fr *FindResult) One(val interface{}) (err error) {
+	if fr.err != nil {
+		return fr.err
+	}
 	if fr.cur != nil {
 		return fr.cur.Decode(val)
 	}
@@ -24,6 +28,9 @@ func (fr *FindResult) One(val interface{}) (err error) {
 }
 
 func (fr *FindResult) All(val interface{}) (err error) {
+	if fr.err != nil {
+		return fr.err
+	}
 	var ctx context.Context
 	if fr.col == nil {
 		ctx = context.Background()
