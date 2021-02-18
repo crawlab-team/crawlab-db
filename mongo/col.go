@@ -3,6 +3,7 @@ package mongo
 import (
 	"context"
 	"github.com/crawlab-team/crawlab-db/errors"
+	"github.com/crawlab-team/go-trace"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -29,6 +30,8 @@ type ColInterface interface {
 	DeleteIndex(name string) (err error)
 	DeleteAllIndexes() (err error)
 	ListIndexes() (indexes []map[string]interface{}, err error)
+	GetContext() (ctx context.Context)
+	GetName() (name string)
 }
 
 type FindOptions struct {
@@ -36,6 +39,8 @@ type FindOptions struct {
 	Limit int
 	Sort  bson.M
 }
+
+var ctx = context.Background()
 
 type Col struct {
 	ctx context.Context
@@ -46,25 +51,25 @@ type Col struct {
 func (col *Col) Insert(doc interface{}) (id primitive.ObjectID, err error) {
 	res, err := col.c.InsertOne(col.ctx, doc)
 	if err != nil {
-		return primitive.NilObjectID, err
+		return primitive.NilObjectID, trace.TraceError(err)
 	}
 	if id, ok := res.InsertedID.(primitive.ObjectID); ok {
 		return id, nil
 	}
-	return primitive.NilObjectID, errors.ErrInvalidType
+	return primitive.NilObjectID, trace.TraceError(errors.ErrInvalidType)
 }
 
 func (col *Col) InsertMany(docs []interface{}) (ids []primitive.ObjectID, err error) {
 	res, err := col.c.InsertMany(col.ctx, docs)
 	if err != nil {
-		return nil, err
+		return nil, trace.TraceError(err)
 	}
 	for _, v := range res.InsertedIDs {
 		if id, ok := v.(primitive.ObjectID); ok {
 			ids = append(ids, id)
 			continue
 		}
-		return nil, errors.ErrInvalidType
+		return nil, trace.TraceError(errors.ErrInvalidType)
 	}
 	return ids, nil
 }
@@ -72,7 +77,7 @@ func (col *Col) InsertMany(docs []interface{}) (ids []primitive.ObjectID, err er
 func (col *Col) UpdateId(id primitive.ObjectID, update interface{}) (err error) {
 	_, err = col.c.UpdateOne(col.ctx, bson.M{"_id": id}, update)
 	if err != nil {
-		return err
+		return trace.TraceError(err)
 	}
 	return nil
 }
@@ -88,7 +93,7 @@ func (col *Col) UpdateWithOptions(query bson.M, update interface{}, opts *option
 		_, err = col.c.UpdateMany(col.ctx, query, update, opts)
 	}
 	if err != nil {
-		return err
+		return trace.TraceError(err)
 	}
 	return nil
 }
@@ -108,7 +113,7 @@ func (col *Col) ReplaceWithOptions(query bson.M, doc interface{}, opts *options.
 		_, err = col.c.ReplaceOne(col.ctx, query, doc, opts)
 	}
 	if err != nil {
-		return err
+		return trace.TraceError(err)
 	}
 	return nil
 }
@@ -116,7 +121,7 @@ func (col *Col) ReplaceWithOptions(query bson.M, doc interface{}, opts *options.
 func (col *Col) DeleteId(id primitive.ObjectID) (err error) {
 	_, err = col.c.DeleteOne(col.ctx, bson.M{"_id": id})
 	if err != nil {
-		return err
+		return trace.TraceError(err)
 	}
 	return nil
 }
@@ -132,7 +137,7 @@ func (col *Col) DeleteWithOptions(query bson.M, opts *options.DeleteOptions) (er
 		_, err = col.c.DeleteMany(col.ctx, query, opts)
 	}
 	if err != nil {
-		return err
+		return trace.TraceError(err)
 	}
 	return nil
 }
@@ -193,33 +198,33 @@ func (col *Col) Count(query bson.M) (total int, err error) {
 func (col *Col) CreateIndex(indexModel mongo.IndexModel) (err error) {
 	_, err = col.c.Indexes().CreateOne(col.ctx, indexModel)
 	if err != nil {
-		return err
+		return trace.TraceError(err)
 	}
-	return err
+	return nil
 }
 
 func (col *Col) CreateIndexes(indexModels []mongo.IndexModel) (err error) {
 	_, err = col.c.Indexes().CreateMany(col.ctx, indexModels)
 	if err != nil {
-		return err
+		return trace.TraceError(err)
 	}
-	return err
+	return nil
 }
 
 func (col *Col) DeleteIndex(name string) (err error) {
 	_, err = col.c.Indexes().DropOne(col.ctx, name)
 	if err != nil {
-		return err
+		return trace.TraceError(err)
 	}
-	return err
+	return nil
 }
 
 func (col *Col) DeleteAllIndexes() (err error) {
 	_, err = col.c.Indexes().DropAll(col.ctx)
 	if err != nil {
-		return err
+		return trace.TraceError(err)
 	}
-	return err
+	return nil
 }
 
 func (col *Col) ListIndexes() (indexes []map[string]interface{}, err error) {
@@ -231,6 +236,14 @@ func (col *Col) ListIndexes() (indexes []map[string]interface{}, err error) {
 		return nil, err
 	}
 	return indexes, nil
+}
+
+func (col *Col) GetContext() (ctx context.Context) {
+	return col.ctx
+}
+
+func (col *Col) GetName() (name string) {
+	return col.c.Name()
 }
 
 func GetMongoCol(colName string) (col *Col) {

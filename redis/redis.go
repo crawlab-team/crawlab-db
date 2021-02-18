@@ -1,14 +1,14 @@
 package redis
 
 import (
-	"errors"
 	"github.com/apex/log"
 	"github.com/cenkalti/backoff/v4"
+	"github.com/crawlab-team/crawlab-db/errors"
 	"github.com/crawlab-team/crawlab-db/utils"
+	"github.com/crawlab-team/go-trace"
 	"github.com/gomodule/redigo/redis"
 	"github.com/spf13/viper"
 	"reflect"
-	"runtime/debug"
 	"strings"
 	"time"
 )
@@ -45,9 +45,7 @@ func (r *Redis) Del(collection string) error {
 	defer utils.Close(c)
 
 	if _, err := c.Do("DEL", collection); err != nil {
-		log.Error(err.Error())
-		debug.PrintStack()
-		return err
+		return trace.TraceError(err)
 	}
 	return nil
 }
@@ -58,9 +56,7 @@ func (r *Redis) LLen(collection string) (int, error) {
 
 	value, err := redis.Int(c.Do("LLEN", collection))
 	if err != nil {
-		log.Error(err.Error())
-		debug.PrintStack()
-		return 0, err
+		return 0, trace.TraceError(err)
 	}
 	return value, nil
 }
@@ -70,9 +66,7 @@ func (r *Redis) RPush(collection string, value interface{}) error {
 	defer utils.Close(c)
 
 	if _, err := c.Do("RPUSH", collection, value); err != nil {
-		log.Error(err.Error())
-		debug.PrintStack()
-		return err
+		return trace.TraceError(err)
 	}
 	return nil
 }
@@ -82,9 +76,7 @@ func (r *Redis) LPush(collection string, value interface{}) error {
 	defer utils.Close(c)
 
 	if _, err := c.Do("RPUSH", collection, value); err != nil {
-		log.Error(err.Error())
-		debug.PrintStack()
-		return err
+		return trace.TraceError(err)
 	}
 	return nil
 }
@@ -93,9 +85,9 @@ func (r *Redis) LPop(collection string) (string, error) {
 	c := r.pool.Get()
 	defer utils.Close(c)
 
-	value, err2 := redis.String(c.Do("LPOP", collection))
-	if err2 != nil {
-		return value, err2
+	value, err := redis.String(c.Do("LPOP", collection))
+	if err != nil {
+		return value, trace.TraceError(err)
 	}
 	return value, nil
 }
@@ -105,26 +97,26 @@ func (r *Redis) HSet(collection string, key string, value string) error {
 	defer utils.Close(c)
 
 	if _, err := c.Do("HSET", collection, key, value); err != nil {
-		log.Error(err.Error())
-		debug.PrintStack()
-		return err
+		return trace.TraceError(err)
 	}
 	return nil
 }
+
 func (r *Redis) Ping() error {
 	c := r.pool.Get()
 	defer utils.Close(c)
-	_, err2 := redis.String(c.Do("PING"))
-	return err2
+	if _, err := redis.String(c.Do("PING")); err != nil {
+		return trace.TraceError(err)
+	}
+	return nil
 }
+
 func (r *Redis) HGet(collection string, key string) (string, error) {
 	c := r.pool.Get()
 	defer utils.Close(c)
-	value, err2 := redis.String(c.Do("HGET", collection, key))
-	if err2 != nil && err2 != redis.ErrNil {
-		log.Error(err2.Error())
-		debug.PrintStack()
-		return value, err2
+	value, err := redis.String(c.Do("HGET", collection, key))
+	if err != nil && err != redis.ErrNil {
+		return value, trace.TraceError(err)
 	}
 	return value, nil
 }
@@ -134,12 +126,11 @@ func (r *Redis) HDel(collection string, key string) error {
 	defer utils.Close(c)
 
 	if _, err := c.Do("HDEL", collection, key); err != nil {
-		log.Error(err.Error())
-		debug.PrintStack()
-		return err
+		return trace.TraceError(err)
 	}
 	return nil
 }
+
 func (r *Redis) HScan(collection string) (results []string, err error) {
 	c := r.pool.Get()
 	defer utils.Close(c)
@@ -151,12 +142,12 @@ func (r *Redis) HScan(collection string) (results []string, err error) {
 	for {
 		values, err := redis.Values(c.Do("HSCAN", collection, cursor))
 		if err != nil {
-			return results, err
+			return results, trace.TraceError(err)
 		}
 
 		values, err = redis.Scan(values, &cursor, &items)
 		if err != nil {
-			return results, err
+			return results, trace.TraceError(err)
 		}
 		for i := 0; i < len(items); i += 2 {
 			cur := items[i+1]
@@ -166,18 +157,16 @@ func (r *Redis) HScan(collection string) (results []string, err error) {
 			break
 		}
 	}
-	return results, err
-
+	return results, nil
 }
+
 func (r *Redis) HKeys(collection string) ([]string, error) {
 	c := r.pool.Get()
 	defer utils.Close(c)
 
-	value, err2 := redis.Strings(c.Do("HKEYS", collection))
-	if err2 != nil {
-		log.Error(err2.Error())
-		debug.PrintStack()
-		return []string{}, err2
+	value, err := redis.Strings(c.Do("HKEYS", collection))
+	if err != nil {
+		return []string{}, trace.TraceError(err)
 	}
 	return value, nil
 }
@@ -191,7 +180,7 @@ func (r *Redis) BRPop(collection string, timeout int) (string, error) {
 
 	values, err := redis.Strings(c.Do("BRPOP", collection, timeout))
 	if err != nil {
-		return "", err
+		return "", trace.TraceError(err)
 	}
 	return values[1], nil
 }
@@ -201,6 +190,17 @@ func NewRedisPool() *redis.Pool {
 	var port = viper.GetString("redis.port")
 	var database = viper.GetString("redis.database")
 	var password = viper.GetString("redis.password")
+
+	// normalize params
+	if address == "" {
+		address = "localhost"
+	}
+	if port == "" {
+		port = "6379"
+	}
+	if database == "" {
+		database = "1"
+	}
 
 	var url string
 	if password == "" {
@@ -221,7 +221,7 @@ func NewRedisPool() *redis.Pool {
 				return nil
 			}
 			_, err := c.Do("PING")
-			return err
+			return trace.TraceError(err)
 		},
 		MaxIdle:         10,
 		MaxActive:       0,
@@ -241,9 +241,9 @@ func InitRedis() error {
 		if err != nil {
 			log.WithError(err).Warnf("waiting for redis pool active connection. will after %f seconds try  again.", b.NextBackOff().Seconds())
 		}
-		return err
+		return trace.TraceError(err)
 	}, b)
-	return err
+	return trace.TraceError(err)
 }
 
 // 构建同步锁key
@@ -261,13 +261,10 @@ func (r *Redis) Lock(lockKey string) (int64, error) {
 	ts := time.Now().Unix()
 	ok, err := c.Do("SET", lockKey, ts, "NX", "PX", 30000)
 	if err != nil {
-		log.Errorf("get lock fail with error: %s", err.Error())
-		debug.PrintStack()
-		return 0, err
+		return 0, trace.TraceError(err)
 	}
 	if ok == nil {
-		log.Errorf("the lockKey is locked: key=%s", lockKey)
-		return 0, errors.New("the lockKey is locked")
+		return 0, trace.TraceError(errors.ErrAlreadyLocked)
 	}
 	return ts, nil
 }
@@ -280,7 +277,6 @@ func (r *Redis) UnLock(lockKey string, value int64) {
 	getValue, err := redis.Int64(c.Do("GET", lockKey))
 	if err != nil {
 		log.Errorf("get lockKey error: %s", err.Error())
-		debug.PrintStack()
 		return
 	}
 
@@ -292,7 +288,6 @@ func (r *Redis) UnLock(lockKey string, value int64) {
 	v, err := redis.Int64(c.Do("DEL", lockKey))
 	if err != nil {
 		log.Errorf("unlock failed, error: %s", err.Error())
-		debug.PrintStack()
 		return
 	}
 
@@ -317,9 +312,7 @@ func (r *Redis) MemoryStats() (stats map[string]int64, err error) {
 		}
 	}
 	if err != nil {
-		log.Errorf("memory stats error: %s", err.Error())
-		debug.PrintStack()
-		return stats, err
+		return stats, trace.TraceError(err)
 	}
 	return stats, nil
 }

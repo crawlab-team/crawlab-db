@@ -2,12 +2,24 @@ package mongo
 
 import (
 	"context"
+	"github.com/crawlab-team/crawlab-db/errors"
+	"github.com/crawlab-team/go-trace"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type FindResultInterface interface {
 	One(val interface{}) (err error)
 	All(val interface{}) (err error)
+}
+
+func NewFindResult() (fr *FindResult) {
+	return &FindResult{}
+}
+
+func NewFindResultWithError(err error) (fr *FindResult) {
+	return &FindResult{
+		err: err,
+	}
 }
 
 type FindResult struct {
@@ -19,9 +31,12 @@ type FindResult struct {
 
 func (fr *FindResult) One(val interface{}) (err error) {
 	if fr.err != nil {
-		return fr.err
+		return trace.TraceError(fr.err)
 	}
 	if fr.cur != nil {
+		if !fr.cur.TryNext(fr.col.ctx) {
+			return trace.TraceError(fr.col.ctx.Err())
+		}
 		return fr.cur.Decode(val)
 	}
 	return fr.res.Decode(val)
@@ -29,13 +44,19 @@ func (fr *FindResult) One(val interface{}) (err error) {
 
 func (fr *FindResult) All(val interface{}) (err error) {
 	if fr.err != nil {
-		return fr.err
+		return trace.TraceError(fr.err)
 	}
 	var ctx context.Context
 	if fr.col == nil {
 		ctx = context.Background()
 	} else {
 		ctx = fr.col.ctx
+	}
+	if fr.cur == nil {
+		return errors.ErrNoCursor
+	}
+	if !fr.cur.TryNext(ctx) {
+		return trace.TraceError(ctx.Err())
 	}
 	return fr.cur.All(ctx, val)
 }
