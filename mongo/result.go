@@ -3,7 +3,6 @@ package mongo
 import (
 	"context"
 	"github.com/crawlab-team/crawlab-db/errors"
-	"github.com/crawlab-team/go-trace"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -31,11 +30,11 @@ type FindResult struct {
 
 func (fr *FindResult) One(val interface{}) (err error) {
 	if fr.err != nil {
-		return trace.TraceError(fr.err)
+		return fr.err
 	}
 	if fr.cur != nil {
 		if !fr.cur.TryNext(fr.col.ctx) {
-			return trace.TraceError(fr.col.ctx.Err())
+			return fr.col.ctx.Err()
 		}
 		return fr.cur.Decode(val)
 	}
@@ -44,7 +43,7 @@ func (fr *FindResult) One(val interface{}) (err error) {
 
 func (fr *FindResult) All(val interface{}) (err error) {
 	if fr.err != nil {
-		return trace.TraceError(fr.err)
+		return fr.err
 	}
 	var ctx context.Context
 	if fr.col == nil {
@@ -56,7 +55,7 @@ func (fr *FindResult) All(val interface{}) (err error) {
 		return errors.ErrNoCursor
 	}
 	if !fr.cur.TryNext(ctx) {
-		return trace.TraceError(ctx.Err())
+		return ctx.Err()
 	}
 	return fr.cur.All(ctx, val)
 }

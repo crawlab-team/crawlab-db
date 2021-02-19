@@ -76,7 +76,10 @@ func (r *Redis) LPush(collection string, value interface{}) error {
 	defer utils.Close(c)
 
 	if _, err := c.Do("RPUSH", collection, value); err != nil {
-		return trace.TraceError(err)
+		if err != redis.ErrNil {
+			return trace.TraceError(err)
+		}
+		return err
 	}
 	return nil
 }
@@ -87,7 +90,10 @@ func (r *Redis) LPop(collection string) (string, error) {
 
 	value, err := redis.String(c.Do("LPOP", collection))
 	if err != nil {
-		return value, trace.TraceError(err)
+		if err != redis.ErrNil {
+			return value, trace.TraceError(err)
+		}
+		return value, err
 	}
 	return value, nil
 }
@@ -97,7 +103,10 @@ func (r *Redis) HSet(collection string, key string, value string) error {
 	defer utils.Close(c)
 
 	if _, err := c.Do("HSET", collection, key, value); err != nil {
-		return trace.TraceError(err)
+		if err != redis.ErrNil {
+			return trace.TraceError(err)
+		}
+		return err
 	}
 	return nil
 }
@@ -106,7 +115,10 @@ func (r *Redis) Ping() error {
 	c := r.pool.Get()
 	defer utils.Close(c)
 	if _, err := redis.String(c.Do("PING")); err != nil {
-		return trace.TraceError(err)
+		if err != redis.ErrNil {
+			return trace.TraceError(err)
+		}
+		return err
 	}
 	return nil
 }
@@ -116,7 +128,10 @@ func (r *Redis) HGet(collection string, key string) (string, error) {
 	defer utils.Close(c)
 	value, err := redis.String(c.Do("HGET", collection, key))
 	if err != nil && err != redis.ErrNil {
-		return value, trace.TraceError(err)
+		if err != redis.ErrNil {
+			return value, trace.TraceError(err)
+		}
+		return value, err
 	}
 	return value, nil
 }
@@ -142,12 +157,18 @@ func (r *Redis) HScan(collection string) (results []string, err error) {
 	for {
 		values, err := redis.Values(c.Do("HSCAN", collection, cursor))
 		if err != nil {
-			return results, trace.TraceError(err)
+			if err != redis.ErrNil {
+				return results, trace.TraceError(err)
+			}
+			return results, err
 		}
 
 		values, err = redis.Scan(values, &cursor, &items)
 		if err != nil {
-			return results, trace.TraceError(err)
+			if err != redis.ErrNil {
+				return results, trace.TraceError(err)
+			}
+			return results, err
 		}
 		for i := 0; i < len(items); i += 2 {
 			cur := items[i+1]
@@ -160,18 +181,21 @@ func (r *Redis) HScan(collection string) (results []string, err error) {
 	return results, nil
 }
 
-func (r *Redis) HKeys(collection string) ([]string, error) {
+func (r *Redis) HKeys(collection string) (results []string, err error) {
 	c := r.pool.Get()
 	defer utils.Close(c)
 
-	value, err := redis.Strings(c.Do("HKEYS", collection))
+	results, err = redis.Strings(c.Do("HKEYS", collection))
 	if err != nil {
-		return []string{}, trace.TraceError(err)
+		if err != redis.ErrNil {
+			return results, trace.TraceError(err)
+		}
+		return results, err
 	}
-	return value, nil
+	return results, nil
 }
 
-func (r *Redis) BRPop(collection string, timeout int) (string, error) {
+func (r *Redis) BRPop(collection string, timeout int) (value string, err error) {
 	if timeout <= 0 {
 		timeout = 60
 	}
@@ -180,7 +204,10 @@ func (r *Redis) BRPop(collection string, timeout int) (string, error) {
 
 	values, err := redis.Strings(c.Do("BRPOP", collection, timeout))
 	if err != nil {
-		return "", trace.TraceError(err)
+		if err != redis.ErrNil {
+			return value, trace.TraceError(err)
+		}
+		return value, err
 	}
 	return values[1], nil
 }
@@ -253,7 +280,7 @@ func (r *Redis) getLockKey(lockKey string) string {
 }
 
 // 获得锁
-func (r *Redis) Lock(lockKey string) (int64, error) {
+func (r *Redis) Lock(lockKey string) (value int64, err error) {
 	c := r.pool.Get()
 	defer utils.Close(c)
 	lockKey = r.getLockKey(lockKey)
@@ -261,7 +288,10 @@ func (r *Redis) Lock(lockKey string) (int64, error) {
 	ts := time.Now().Unix()
 	ok, err := c.Do("SET", lockKey, ts, "NX", "PX", 30000)
 	if err != nil {
-		return 0, trace.TraceError(err)
+		if err != redis.ErrNil {
+			return value, trace.TraceError(err)
+		}
+		return value, err
 	}
 	if ok == nil {
 		return 0, trace.TraceError(errors.ErrAlreadyLocked)
@@ -312,7 +342,10 @@ func (r *Redis) MemoryStats() (stats map[string]int64, err error) {
 		}
 	}
 	if err != nil {
-		return stats, trace.TraceError(err)
+		if err != redis.ErrNil {
+			return stats, trace.TraceError(err)
+		}
+		return stats, err
 	}
 	return stats, nil
 }
