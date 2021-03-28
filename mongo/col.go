@@ -151,7 +151,7 @@ func (col *Col) Find(query bson.M, opts *FindOptions) (fr *FindResult) {
 		}
 		if opts.Limit != 0 {
 			limitInt64 := int64(opts.Limit)
-			_opts.Skip = &limitInt64
+			_opts.Limit = &limitInt64
 		}
 		if opts.Sort != nil {
 			_opts.Sort = opts.Sort
