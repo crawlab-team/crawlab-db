@@ -16,6 +16,11 @@ type ColTestObject struct {
 	col     *Col
 }
 
+type TestDocument struct {
+	Key  string   `bson:"key"`
+	Tags []string `bson:"tags"`
+}
+
 func setupColTest() (to *ColTestObject, err error) {
 	dbName := "test_db"
 	colName := "test_col"
@@ -260,7 +265,10 @@ func TestCol_Find(t *testing.T) {
 	n := 10
 	var docs []interface{}
 	for i := 0; i < n; i++ {
-		docs = append(docs, bson.M{"key": fmt.Sprintf("value-%d", i)})
+		docs = append(docs, TestDocument{
+			Key:  fmt.Sprintf("value-%d", i),
+			Tags: []string{"test tag"},
+		})
 	}
 	ids, err := to.col.InsertMany(docs)
 	require.Nil(t, err)
@@ -286,20 +294,25 @@ func TestCol_Find(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, 5, len(docs))
 
-	var resDocs []map[string]string
+	var resDocs []TestDocument
 	err = to.col.Find(nil, &FindOptions{
 		Sort: bson.M{"key": 1},
 	}).All(&resDocs)
 	require.Nil(t, err)
 	require.Greater(t, len(resDocs), 0)
-	require.Equal(t, "value-0", resDocs[0]["key"])
+	require.Equal(t, "value-0", resDocs[0].Key)
 
 	err = to.col.Find(nil, &FindOptions{
 		Sort: bson.M{"key": -1},
 	}).All(&resDocs)
 	require.Nil(t, err)
 	require.Greater(t, len(resDocs), 0)
-	require.Equal(t, fmt.Sprintf("value-%d", n-1), resDocs[0]["key"])
+	require.Equal(t, fmt.Sprintf("value-%d", n-1), resDocs[0].Key)
+
+	var resDocs2 []TestDocument
+	err = to.col.Find(bson.M{"tags": bson.M{"$in": []string{"test tag"}}}, nil).All(&resDocs2)
+	require.Nil(t, err)
+	require.Greater(t, len(resDocs2), 0)
 
 	cleanupColTest(to)
 }

@@ -34,7 +34,7 @@ func (fr *FindResult) One(val interface{}) (err error) {
 	}
 	if fr.cur != nil {
 		if !fr.cur.TryNext(fr.col.ctx) {
-			return fr.col.ctx.Err()
+			return mongo.ErrNoDocuments
 		}
 		return fr.cur.Decode(val)
 	}
