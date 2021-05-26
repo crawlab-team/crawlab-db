@@ -22,6 +22,8 @@ type RedisClient interface {
 	HScan(collection string) (results map[string]string, err error)
 	HKeys(collection string) (results []string, err error)
 	ZAdd(collection string, score float32, value interface{}) (err error)
+	ZCount(collection string, min string, max string) (count int, err error)
+	ZCountAll(collection string) (count int, err error)
 	ZScan(collection string, pattern string, count int) (results []string, err error)
 	ZPopMax(collection string, count int) (results []string, err error)
 	ZPopMin(collection string, count int) (results []string, err error)

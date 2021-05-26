@@ -187,7 +187,7 @@ func TestRedisClient_HKeys(t *testing.T) {
 	}
 }
 
-func TestRedisClient_ZAdd_ZPopMax_ZPopMin(t *testing.T) {
+func TestRedisClient_ZAdd_ZCount_ZCountAll_ZPopMax_ZPopMin(t *testing.T) {
 	var err error
 	T.Setup(t)
 
@@ -196,6 +196,10 @@ func TestRedisClient_ZAdd_ZPopMax_ZPopMin(t *testing.T) {
 		err = T.client.ZAdd(T.TestCollection, score, v)
 		require.Nil(t, err)
 	}
+
+	count, err := T.client.ZCountAll(T.TestCollection)
+	require.Nil(t, err)
+	require.Equal(t, len(T.TestMessages), count)
 
 	value, err := T.client.ZPopMaxOne(T.TestCollection)
 	require.Nil(t, err)

@@ -276,6 +276,21 @@ func (client *Client) ZAdd(collection string, score float32, value interface{}) 
 	return nil
 }
 
+func (client *Client) ZCount(collection string, min string, max string) (count int, err error) {
+	c := client.pool.Get()
+	defer utils.Close(c)
+
+	count, err = redis.Int(c.Do("ZCOUNT", collection, min, max))
+	if err != nil {
+		return 0, trace.TraceError(err)
+	}
+	return count, nil
+}
+
+func (client *Client) ZCountAll(collection string) (count int, err error) {
+	return client.ZCount(collection, "-inf", "+inf")
+}
+
 func (client *Client) ZScan(collection string, pattern string, count int) (values []string, err error) {
 	c := client.pool.Get()
 	defer utils.Close(c)
