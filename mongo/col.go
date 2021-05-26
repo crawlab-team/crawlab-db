@@ -65,11 +65,13 @@ func (col *Col) InsertMany(docs []interface{}) (ids []primitive.ObjectID, err er
 		return nil, trace.TraceError(err)
 	}
 	for _, v := range res.InsertedIDs {
-		if id, ok := v.(primitive.ObjectID); ok {
+		switch v.(type) {
+		case primitive.ObjectID:
+			id := v.(primitive.ObjectID)
 			ids = append(ids, id)
-			continue
+		default:
+			return nil, trace.TraceError(errors.ErrInvalidType)
 		}
-		return nil, trace.TraceError(errors.ErrInvalidType)
 	}
 	return ids, nil
 }
