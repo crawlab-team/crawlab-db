@@ -1,7 +1,7 @@
 package test
 
 import (
-	"github.com/crawlab-team/crawlab-db/interfaces"
+	"github.com/crawlab-team/crawlab-db"
 	"github.com/crawlab-team/crawlab-db/redis"
 	"testing"
 )
@@ -15,11 +15,13 @@ func init() {
 }
 
 type Test struct {
-	client          interfaces.RedisClient
+	client          db.RedisClient
 	TestCollection  string
 	TestMessage     string
 	TestMessages    []string
 	TestMessagesMap map[string]string
+	TestKeysAlpha   []string
+	TestKeysBeta    []string
 	TestLockKey     string
 }
 
@@ -28,7 +30,10 @@ func (t *Test) Setup(t2 *testing.T) {
 }
 
 func (t *Test) Cleanup() {
-	_ = t.client.Del(t.TestCollection)
+	keys, _ := t.client.AllKeys()
+	for _, key := range keys {
+		_ = t.client.Del(key)
+	}
 }
 
 var T *Test
@@ -61,6 +66,22 @@ func NewTest() (t *Test, err error) {
 		"test key 1": "test value 1",
 		"test key 2": "test value 2",
 		"test key 3": "test value 3",
+	}
+
+	// test keys alpha
+	t.TestKeysAlpha = []string{
+		"test key alpha 1",
+		"test key alpha 2",
+		"test key alpha 3",
+	}
+
+	// test keys beta
+	t.TestKeysBeta = []string{
+		"test key beta 1",
+		"test key beta 2",
+		"test key beta 3",
+		"test key beta 4",
+		"test key beta 5",
 	}
 
 	// test lock key

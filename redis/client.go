@@ -3,8 +3,8 @@ package redis
 import (
 	"github.com/apex/log"
 	"github.com/cenkalti/backoff/v4"
+	"github.com/crawlab-team/crawlab-db"
 	"github.com/crawlab-team/crawlab-db/errors"
-	"github.com/crawlab-team/crawlab-db/interfaces"
 	"github.com/crawlab-team/crawlab-db/utils"
 	"github.com/crawlab-team/go-trace"
 	"github.com/gomodule/redigo/redis"
@@ -32,6 +32,21 @@ func (client *Client) Ping() error {
 		return err
 	}
 	return nil
+}
+
+func (client *Client) Keys(pattern string) (values []string, err error) {
+	c := client.pool.Get()
+	defer utils.Close(c)
+
+	values, err = redis.Strings(c.Do("KEYS", pattern))
+	if err != nil {
+		return nil, trace.TraceError(err)
+	}
+	return values, nil
+}
+
+func (client *Client) AllKeys() (values []string, err error) {
+	return client.Keys("*")
 }
 
 func (client *Client) Get(collection string) (value string, err error) {
@@ -486,7 +501,7 @@ func (client *Client) getTimeout(timeout int) (res int) {
 	return timeout
 }
 
-var client interfaces.RedisClient
+var client db.RedisClient
 
 func NewRedisClient(opts ...Option) (client *Client, err error) {
 	// client
@@ -508,7 +523,7 @@ func NewRedisClient(opts ...Option) (client *Client, err error) {
 	return client, nil
 }
 
-func GetRedisClient() (c interfaces.RedisClient, err error) {
+func GetRedisClient() (c db.RedisClient, err error) {
 	if client != nil {
 		return client, nil
 	}

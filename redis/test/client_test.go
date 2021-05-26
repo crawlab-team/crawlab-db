@@ -27,6 +27,32 @@ func TestRedisClient_Get_Set(t *testing.T) {
 	require.Equal(t, T.TestMessage, value)
 }
 
+func TestRedisClient_Keys_AllKeys(t *testing.T) {
+	var err error
+	T.Setup(t)
+
+	for _, key := range T.TestKeysAlpha {
+		err = T.client.Set(key, key)
+		require.Nil(t, err)
+	}
+	for _, key := range T.TestKeysBeta {
+		err = T.client.Set(key, key)
+		require.Nil(t, err)
+	}
+
+	keys, err := T.client.Keys("*alpha*")
+	require.Nil(t, err)
+	require.Len(t, keys, len(T.TestKeysAlpha))
+
+	keys, err = T.client.Keys("*beta*")
+	require.Nil(t, err)
+	require.Len(t, keys, len(T.TestKeysBeta))
+
+	keys, err = T.client.AllKeys()
+	require.Nil(t, err)
+	require.Len(t, keys, len(T.TestKeysAlpha)+len(T.TestKeysBeta))
+}
+
 func TestRedisClient_RPush_LPop_LLen(t *testing.T) {
 	var err error
 	T.Setup(t)

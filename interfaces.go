@@ -1,9 +1,11 @@
-package interfaces
+package db
 
 import "time"
 
 type RedisClient interface {
 	Ping() (err error)
+	Keys(pattern string) (values []string, err error)
+	AllKeys() (values []string, err error)
 	Get(collection string) (value string, err error)
 	Set(collection string, value string) (err error)
 	Del(collection string) (err error)
