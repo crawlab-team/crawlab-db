@@ -10,6 +10,12 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+func init() {
+	if err := InitMongo(); err != nil {
+		panic(err)
+	}
+}
+
 var AppName = "crawlab-db"
 
 var Client *mongo.Client

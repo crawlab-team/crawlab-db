@@ -25,6 +25,7 @@ type ColInterface interface {
 	Find(query bson.M, opts *FindOptions) (fr *FindResult)
 	FindId(id primitive.ObjectID) (fr *FindResult)
 	Count(query bson.M) (total int, err error)
+	Aggregate(pipeline mongo.Pipeline, opts *options.AggregateOptions) (fr *FindResult)
 	CreateIndex(indexModel mongo.IndexModel) (err error)
 	CreateIndexes(indexModels []mongo.IndexModel) (err error)
 	DeleteIndex(name string) (err error)
@@ -37,7 +38,7 @@ type ColInterface interface {
 type FindOptions struct {
 	Skip  int
 	Limit int
-	Sort  bson.M
+	Sort  bson.D
 }
 
 var ctx = context.Background()
@@ -195,6 +196,27 @@ func (col *Col) Count(query bson.M) (total int, err error) {
 	}
 	total = int(totalInt64)
 	return total, nil
+}
+
+func (col *Col) Aggregate(pipeline mongo.Pipeline, opts *options.AggregateOptions) (fr *FindResult) {
+	cur, err := col.c.Aggregate(col.ctx, pipeline, opts)
+	if err != nil {
+		return &FindResult{
+			col: col,
+			err: err,
+		}
+	}
+	if cur.Err() != nil {
+		return &FindResult{
+			col: col,
+			err: cur.Err(),
+		}
+	}
+	fr = &FindResult{
+		col: col,
+		cur: cur,
+	}
+	return fr
 }
 
 func (col *Col) CreateIndex(indexModel mongo.IndexModel) (err error) {

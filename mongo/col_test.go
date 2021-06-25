@@ -7,6 +7,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"strconv"
 	"testing"
 )
 
@@ -17,8 +18,15 @@ type ColTestObject struct {
 }
 
 type TestDocument struct {
-	Key  string   `bson:"key"`
-	Tags []string `bson:"tags"`
+	Key   string   `bson:"key"`
+	Value int      `bson:"value"`
+	Tags  []string `bson:"tags"`
+}
+
+type TestAggregateResult struct {
+	Id    string `bson:"_id"`
+	Count int    `bson:"count"`
+	Value int    `bson:"value"`
 }
 
 func setupColTest() (to *ColTestObject, err error) {
@@ -93,7 +101,7 @@ func TestCol_InsertMany(t *testing.T) {
 	require.Equal(t, n, len(ids))
 
 	var resDocs []map[string]string
-	err = to.col.Find(nil, &FindOptions{Sort: bson.M{"_id": 1}}).All(&resDocs)
+	err = to.col.Find(nil, &FindOptions{Sort: bson.D{{"_id", 1}}}).All(&resDocs)
 	require.Nil(t, err)
 	require.Equal(t, n, len(resDocs))
 	for i, doc := range resDocs {
@@ -143,7 +151,7 @@ func TestCol_Update(t *testing.T) {
 	require.Nil(t, err)
 
 	var resDocs []map[string]string
-	err = to.col.Find(nil, &FindOptions{Sort: bson.M{"_id": 1}}).All(&resDocs)
+	err = to.col.Find(nil, &FindOptions{Sort: bson.D{{"_id", 1}}}).All(&resDocs)
 	require.Nil(t, err)
 	for _, doc := range resDocs {
 		require.Equal(t, "new-value", doc["key"])
@@ -296,14 +304,14 @@ func TestCol_Find(t *testing.T) {
 
 	var resDocs []TestDocument
 	err = to.col.Find(nil, &FindOptions{
-		Sort: bson.M{"key": 1},
+		Sort: bson.D{{"key", 1}},
 	}).All(&resDocs)
 	require.Nil(t, err)
 	require.Greater(t, len(resDocs), 0)
 	require.Equal(t, "value-0", resDocs[0].Key)
 
 	err = to.col.Find(nil, &FindOptions{
-		Sort: bson.M{"key": -1},
+		Sort: bson.D{{"key", -1}},
 	}).All(&resDocs)
 	require.Nil(t, err)
 	require.Greater(t, len(resDocs), 0)
@@ -331,6 +339,59 @@ func TestCol_CreateIndex(t *testing.T) {
 	require.Equal(t, 2, len(indexes))
 
 	cleanupColTest(to)
+}
+
+func TestCol_Aggregate(t *testing.T) {
+	to, err := setupColTest()
+	require.Nil(t, err)
+
+	n := 10
+	v := 2
+	var docs []interface{}
+	for i := 0; i < n; i++ {
+		docs = append(docs, TestDocument{
+			Key:   fmt.Sprintf("%d", i%2),
+			Value: v,
+		})
+	}
+	ids, err := to.col.InsertMany(docs)
+	require.Nil(t, err)
+	require.Equal(t, n, len(ids))
+
+	pipeline := mongo.Pipeline{
+		{
+			{
+				"$group",
+				bson.D{
+					{"_id", "$key"},
+					{
+						"count",
+						bson.D{{"$sum", 1}},
+					},
+					{
+						"value",
+						bson.D{{"$sum", "$value"}},
+					},
+				},
+			},
+		},
+		{
+			{
+				"$sort",
+				bson.D{{"_id", 1}},
+			},
+		},
+	}
+	var results []TestAggregateResult
+	err = to.col.Aggregate(pipeline, nil).All(&results)
+	require.Nil(t, err)
+	require.Equal(t, 2, len(results))
+
+	for i, r := range results {
+		require.Equal(t, strconv.Itoa(i), r.Id)
+		require.Equal(t, n/2, r.Count)
+		require.Equal(t, n*v/2, r.Value)
+	}
 }
 
 func TestCol_CreateIndexes(t *testing.T) {
