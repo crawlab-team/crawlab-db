@@ -28,6 +28,8 @@ type ColInterface interface {
 	Aggregate(pipeline mongo.Pipeline, opts *options.AggregateOptions) (fr *FindResult)
 	CreateIndex(indexModel mongo.IndexModel) (err error)
 	CreateIndexes(indexModels []mongo.IndexModel) (err error)
+	MustCreateIndex(indexModel mongo.IndexModel)
+	MustCreateIndexes(indexModels []mongo.IndexModel)
 	DeleteIndex(name string) (err error)
 	DeleteAllIndexes() (err error)
 	ListIndexes() (indexes []map[string]interface{}, err error)
@@ -233,6 +235,14 @@ func (col *Col) CreateIndexes(indexModels []mongo.IndexModel) (err error) {
 		return trace.TraceError(err)
 	}
 	return nil
+}
+
+func (col *Col) MustCreateIndex(indexModel mongo.IndexModel) {
+	_, _ = col.c.Indexes().CreateOne(col.ctx, indexModel)
+}
+
+func (col *Col) MustCreateIndexes(indexModels []mongo.IndexModel) {
+	_, _ = col.c.Indexes().CreateMany(col.ctx, indexModels)
 }
 
 func (col *Col) DeleteIndex(name string) (err error) {
