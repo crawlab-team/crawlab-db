@@ -1,6 +1,7 @@
 package mongo
 
 import (
+	"github.com/crawlab-team/go-trace"
 	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -12,5 +13,13 @@ func GetMongoDb(dbName string) (db *mongo.Database) {
 	if dbName == "" {
 		dbName = "test"
 	}
-	return Client.Database(dbName, nil)
+
+	// client
+	c, err := GetMongoClient()
+	if err != nil {
+		trace.PrintError(err)
+		return nil
+	}
+
+	return c.Database(dbName, nil)
 }

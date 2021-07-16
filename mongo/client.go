@@ -10,20 +10,15 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func init() {
-	if err := InitMongo(); err != nil {
-		panic(err)
-	}
-}
-
 var AppName = "crawlab-db"
 
 var Client *mongo.Client
 
-func InitMongo() error {
+func GetMongoClient() (c *mongo.Client, err error) {
 	if Client != nil {
-		return nil
+		return Client, nil
 	}
+
 	var mongoUri = viper.GetString("mongo.uri")
 	var mongoHost = viper.GetString("mongo.host")
 	var mongoPort = viper.GetString("mongo.port")
@@ -79,20 +74,21 @@ func InitMongo() error {
 
 	// attempt to connect with retry
 	bp := backoff.NewExponentialBackOff()
-	var err error
 	err = backoff.Retry(func() error {
 		errMsg := fmt.Sprintf("waiting for connect mongo database, after %f seconds try again.", bp.NextBackOff().Seconds())
-		Client, err = mongo.NewClient(opts)
+		c, err = mongo.NewClient(opts)
 		if err != nil {
 			log.WithError(err).Warnf(errMsg)
 			return err
 		}
-		if err := Client.Connect(context.TODO()); err != nil {
+		if err := c.Connect(context.TODO()); err != nil {
 			log.WithError(err).Warnf(errMsg)
 			return err
 		}
 		return nil
 	}, bp)
 
-	return nil
+	Client = c
+
+	return c, nil
 }

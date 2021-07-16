@@ -16,7 +16,7 @@ func TestMongoInitMongo(t *testing.T) {
 	err := setupMongoTest()
 	require.Nil(t, err)
 
-	err = InitMongo()
+	_, err = GetMongoClient()
 	require.Nil(t, err)
 
 	cleanupMongoTest()
