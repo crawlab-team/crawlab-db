@@ -14,7 +14,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.6.1
-	go.mongodb.org/mongo-driver v1.4.5
+	go.mongodb.org/mongo-driver v1.8.0
 	golang.org/x/text v0.3.3 // indirect
 	github.com/crawlab-team/go-trace v0.1.0
 )
