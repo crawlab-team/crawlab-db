@@ -6,8 +6,8 @@ require (
 	github.com/apex/log v1.9.0
 	github.com/cenkalti/backoff/v4 v4.1.0
 	github.com/crawlab-team/go-trace v0.1.0
+	github.com/emirpasic/gods v1.12.0
 	github.com/gomodule/redigo v2.0.0+incompatible
-	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/lib/pq v1.1.1 // indirect
 	github.com/olivere/elastic/v7 v7.0.15
