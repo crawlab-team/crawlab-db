@@ -7,7 +7,7 @@ import (
 )
 
 func RunTransaction(fn func(mongo.SessionContext) error) (err error) {
-	s, err := Client.StartSession()
+	s, err := _client.StartSession()
 	if err != nil {
 		return trace.TraceError(err)
 	}

@@ -12,63 +12,81 @@ import (
 
 var AppName = "crawlab-db"
 
-var Client *mongo.Client
+var _client *mongo.Client
 
-func GetMongoClient() (c *mongo.Client, err error) {
-	if Client != nil {
-		return Client, nil
+func GetMongoClient(opts ...ClientOption) (c *mongo.Client, err error) {
+	if _client != nil {
+		return _client, nil
 	}
 
-	var mongoUri = viper.GetString("mongo.uri")
-	var mongoHost = viper.GetString("mongo.host")
-	var mongoPort = viper.GetString("mongo.port")
-	var mongoDb = viper.GetString("mongo.db")
-	var mongoHosts = viper.GetStringSlice("mongo.hosts")
-	var mongoUsername = viper.GetString("mongo.username")
-	var mongoPassword = viper.GetString("mongo.password")
-	var mongoAuthSource = viper.GetString("mongo.authSource")
-	var mongoAuthMechanism = viper.GetString("mongo.authMechanism")
-	var mongoAuthMechanismProperties = viper.GetStringMapString("mongo.authMechanismProperties")
+	_opts := &ClientOptions{
+		Host:       "localhost",
+		Port:       "27017",
+		Db:         "crawlab",
+		AuthSource: "admin",
+	}
+	for _, op := range opts {
+		op(_opts)
+	}
 
-	if mongoHost == "" {
-		mongoHost = "localhost"
+	if _opts.Uri == "" {
+		_opts.Uri = viper.GetString("mongo.uri")
 	}
-	if mongoPort == "" {
-		mongoPort = "27017"
+	if _opts.Host == "" {
+		_opts.Host = viper.GetString("mongo.host")
 	}
-	if mongoDb == "" {
-		mongoDb = "crawlab"
+	if _opts.Port == "" {
+		_opts.Port = viper.GetString("mongo.port")
 	}
-	if mongoAuthSource == "" {
-		mongoAuthSource = "admin"
+	if _opts.Db == "" {
+		_opts.Db = viper.GetString("mongo.db")
 	}
-	opts := &options.ClientOptions{
+	if len(_opts.Hosts) == 0 {
+		_opts.Hosts = viper.GetStringSlice("mongo.hosts")
+	}
+	if _opts.Username == "" {
+		_opts.Username = viper.GetString("mongo.username")
+	}
+	if _opts.Password == "" {
+		_opts.Password = viper.GetString("mongo.password")
+	}
+	if _opts.AuthSource == "" {
+		_opts.AuthSource = viper.GetString("mongo.authSource")
+	}
+	if _opts.AuthMechanism == "" {
+		_opts.AuthMechanism = viper.GetString("mongo.authMechanism")
+	}
+	if _opts.AuthMechanismProperties == nil {
+		_opts.AuthMechanismProperties = viper.GetStringMapString("mongo.authMechanismProperties")
+	}
+
+	mongoOpts := &options.ClientOptions{
 		AppName: &AppName,
 	}
-	if mongoUri != "" {
+	if _opts.Uri != "" {
 		// uri is set
-		opts.ApplyURI(mongoUri)
+		mongoOpts.ApplyURI(_opts.Uri)
 	} else {
 		// uri is unset
 
 		// username and password are set
-		if mongoUsername != "" && mongoPassword != "" {
-			opts.SetAuth(options.Credential{
-				AuthMechanism:           mongoAuthMechanism,
-				AuthMechanismProperties: mongoAuthMechanismProperties,
-				AuthSource:              mongoAuthSource,
-				Username:                mongoUsername,
-				Password:                mongoPassword,
+		if _opts.Username != "" && _opts.Password != "" {
+			mongoOpts.SetAuth(options.Credential{
+				AuthMechanism:           _opts.AuthMechanism,
+				AuthMechanismProperties: _opts.AuthMechanismProperties,
+				AuthSource:              _opts.AuthSource,
+				Username:                _opts.Username,
+				Password:                _opts.Password,
 				PasswordSet:             true,
 			})
 		}
 
-		if len(mongoHosts) > 0 {
+		if len(_opts.Hosts) > 0 {
 			// hosts are set
-			opts.SetHosts(mongoHosts)
+			mongoOpts.SetHosts(_opts.Hosts)
 		} else {
 			// hosts are unset
-			opts.ApplyURI(fmt.Sprintf("mongodb://%s:%s/%s", mongoHost, mongoPort, mongoDb))
+			mongoOpts.ApplyURI(fmt.Sprintf("mongodb://%s:%s/%s", _opts.Host, _opts.Port, _opts.Db))
 		}
 	}
 
@@ -76,7 +94,7 @@ func GetMongoClient() (c *mongo.Client, err error) {
 	bp := backoff.NewExponentialBackOff()
 	err = backoff.Retry(func() error {
 		errMsg := fmt.Sprintf("waiting for connect mongo database, after %f seconds try again.", bp.NextBackOff().Seconds())
-		c, err = mongo.NewClient(opts)
+		c, err = mongo.NewClient(mongoOpts)
 		if err != nil {
 			log.WithError(err).Warnf(errMsg)
 			return err
@@ -88,7 +106,7 @@ func GetMongoClient() (c *mongo.Client, err error) {
 		return nil
 	}, bp)
 
-	Client = c
+	_client = c
 
 	return c, nil
 }

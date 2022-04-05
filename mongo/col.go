@@ -43,8 +43,6 @@ type FindOptions struct {
 	Sort  bson.D
 }
 
-var ctx = context.Background()
-
 type Col struct {
 	ctx context.Context
 	db  *mongo.Database
@@ -281,12 +279,14 @@ func (col *Col) GetName() (name string) {
 }
 
 func GetMongoCol(colName string) (col *Col) {
-	return GetMongoColWithDb(colName, "")
+	return GetMongoColWithDb(colName, nil)
 }
 
-func GetMongoColWithDb(colName, dbName string) (col *Col) {
+func GetMongoColWithDb(colName string, db *mongo.Database) (col *Col) {
 	ctx := context.Background()
-	db := GetMongoDb(dbName)
+	if db == nil {
+		db = GetMongoDb("")
+	}
 	c := db.Collection(colName)
 	col = &Col{
 		ctx: ctx,
@@ -295,33 +295,3 @@ func GetMongoColWithDb(colName, dbName string) (col *Col) {
 	}
 	return col
 }
-
-//func GetDataSourceCol(host string, port string, username string, password string, authSource string, database string, col string) (*mgo.Session, *mgo.Collection, error) {
-//    timeout := time.Second * 10
-//    dialInfo := mgo.DialInfo{
-//        Addrs:         []string{net.JoinHostPort(host, port)},
-//        Timeout:       timeout,
-//        Database:      database,
-//        PoolLimit:     100,
-//        PoolTimeout:   timeout,
-//        ReadTimeout:   timeout,
-//        WriteTimeout:  timeout,
-//        AppName:       "crawlab",
-//        FailFast:      true,
-//        MinPoolSize:   10,
-//        MaxIdleTimeMS: 1000 * 30,
-//    }
-//    if username != "" {
-//        dialInfo.Username = username
-//        dialInfo.Password = password
-//        dialInfo.Source = authSource
-//    }
-//    s, err := mgo.DialWithInfo(&dialInfo)
-//    if err != nil {
-//        log.Errorf("dial mongo error: " + err.Error())
-//        debug.PrintStack()
-//        return nil, nil, err
-//    }
-//    db := s.DB(database)
-//    return s, db.C(col), nil
-//}

@@ -33,9 +33,6 @@ func setupColTest() (to *ColTestObject, err error) {
 	dbName := "test_db"
 	colName := "test_col"
 	viper.Set("mongo.db", dbName)
-	if err := InitMongo(); err != nil {
-		return nil, err
-	}
 	col := GetMongoCol(colName)
 	if err := col.db.Drop(col.ctx); err != nil {
 		return nil, err
@@ -53,8 +50,6 @@ func cleanupColTest(to *ColTestObject) {
 
 func TestGetMongoCol(t *testing.T) {
 	colName := "test_col"
-	err := InitMongo()
-	require.Nil(t, err)
 
 	col := GetMongoCol(colName)
 	require.Equal(t, colName, col.c.Name())
@@ -63,8 +58,6 @@ func TestGetMongoCol(t *testing.T) {
 func TestGetMongoColWithDb(t *testing.T) {
 	dbName := "test_db"
 	colName := "test_col"
-	err := InitMongo()
-	require.Nil(t, err)
 
 	col := GetMongoColWithDb(colName, dbName)
 	require.Equal(t, colName, col.c.Name())
