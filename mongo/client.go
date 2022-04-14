@@ -8,17 +8,16 @@ import (
 	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"sync"
 )
 
 var AppName = "crawlab-db"
 
-var _client *mongo.Client
+var _clientMap = map[*ClientOptions]*mongo.Client{}
+var _mu sync.Mutex
 
 func GetMongoClient(opts ...ClientOption) (c *mongo.Client, err error) {
-	if _client != nil {
-		return _client, nil
-	}
-
+	// client options
 	_opts := &ClientOptions{
 		Host:       "localhost",
 		Port:       "27017",
@@ -28,7 +27,6 @@ func GetMongoClient(opts ...ClientOption) (c *mongo.Client, err error) {
 	for _, op := range opts {
 		op(_opts)
 	}
-
 	if _opts.Uri == "" {
 		_opts.Uri = viper.GetString("mongo.uri")
 	}
@@ -60,9 +58,32 @@ func GetMongoClient(opts ...ClientOption) (c *mongo.Client, err error) {
 		_opts.AuthMechanismProperties = viper.GetStringMapString("mongo.authMechanismProperties")
 	}
 
+	// attempt to get client by client options
+	c, ok := _clientMap[_opts]
+	if ok {
+		return c, nil
+	}
+
+	// create new mongo client
+	c, err = newMongoClient(_opts.Context, _opts)
+	if err != nil {
+		return nil, err
+	}
+
+	// add to map
+	_mu.Lock()
+	_clientMap[_opts] = c
+	_mu.Unlock()
+
+	return c, nil
+}
+
+func newMongoClient(ctx context.Context, _opts *ClientOptions) (c *mongo.Client, err error) {
+	// mongo client options
 	mongoOpts := &options.ClientOptions{
 		AppName: &AppName,
 	}
+
 	if _opts.Uri != "" {
 		// uri is set
 		mongoOpts.ApplyURI(_opts.Uri)
@@ -99,14 +120,12 @@ func GetMongoClient(opts ...ClientOption) (c *mongo.Client, err error) {
 			log.WithError(err).Warnf(errMsg)
 			return err
 		}
-		if err := c.Connect(context.TODO()); err != nil {
+		if err := c.Connect(ctx); err != nil {
 			log.WithError(err).Warnf(errMsg)
 			return err
 		}
 		return nil
 	}, bp)
-
-	_client = c
 
 	return c, nil
 }

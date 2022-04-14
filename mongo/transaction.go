@@ -7,13 +7,24 @@ import (
 )
 
 func RunTransaction(fn func(mongo.SessionContext) error) (err error) {
-	s, err := _client.StartSession()
+	// default client
+	c, err := GetMongoClient()
+	if err != nil {
+		return err
+	}
+
+	// start session
+	s, err := c.StartSession()
 	if err != nil {
 		return trace.TraceError(err)
 	}
+
+	// start transaction
 	if err := s.StartTransaction(); err != nil {
 		return trace.TraceError(err)
 	}
+
+	// perform operation
 	if err := mongo.WithSession(context.Background(), s, func(sc mongo.SessionContext) error {
 		if err := fn(sc); err != nil {
 			return trace.TraceError(err)
@@ -25,5 +36,6 @@ func RunTransaction(fn func(mongo.SessionContext) error) (err error) {
 	}); err != nil {
 		return trace.TraceError(err)
 	}
+
 	return nil
 }
