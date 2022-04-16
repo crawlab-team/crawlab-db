@@ -2,9 +2,11 @@ package mongo
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/apex/log"
 	"github.com/cenkalti/backoff/v4"
+	"github.com/crawlab-team/go-trace"
 	"github.com/spf13/viper"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -13,7 +15,7 @@ import (
 
 var AppName = "crawlab-db"
 
-var _clientMap = map[*ClientOptions]*mongo.Client{}
+var _clientMap = map[string]*mongo.Client{}
 var _mu sync.Mutex
 
 func GetMongoClient(opts ...ClientOption) (c *mongo.Client, err error) {
@@ -58,8 +60,15 @@ func GetMongoClient(opts ...ClientOption) (c *mongo.Client, err error) {
 		_opts.AuthMechanismProperties = viper.GetStringMapString("mongo.authMechanismProperties")
 	}
 
+	// client options key json string
+	_optsKeyBytes, err := json.Marshal(_opts)
+	if err != nil {
+		return nil, trace.TraceError(err)
+	}
+	_optsKey := string(_optsKeyBytes)
+
 	// attempt to get client by client options
-	c, ok := _clientMap[_opts]
+	c, ok := _clientMap[_optsKey]
 	if ok {
 		return c, nil
 	}
@@ -72,7 +81,7 @@ func GetMongoClient(opts ...ClientOption) (c *mongo.Client, err error) {
 
 	// add to map
 	_mu.Lock()
-	_clientMap[_opts] = c
+	_clientMap[_optsKey] = c
 	_mu.Unlock()
 
 	return c, nil

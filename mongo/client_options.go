@@ -72,8 +72,8 @@ func WithAuthSource(value string) ClientOption {
 	}
 }
 
-func WithAuthMechanism(value map[string]string) ClientOption {
+func WithAuthMechanism(value string) ClientOption {
 	return func(options *ClientOptions) {
-		options.AuthMechanismProperties = value
+		options.AuthMechanism = value
 	}
 }
