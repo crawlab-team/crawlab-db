@@ -20,12 +20,7 @@ var _mu sync.Mutex
 
 func GetMongoClient(opts ...ClientOption) (c *mongo.Client, err error) {
 	// client options
-	_opts := &ClientOptions{
-		Host:       "localhost",
-		Port:       "27017",
-		Db:         "crawlab",
-		AuthSource: "admin",
-	}
+	_opts := &ClientOptions{}
 	for _, op := range opts {
 		op(_opts)
 	}
@@ -34,12 +29,21 @@ func GetMongoClient(opts ...ClientOption) (c *mongo.Client, err error) {
 	}
 	if _opts.Host == "" {
 		_opts.Host = viper.GetString("mongo.host")
+		if _opts.Host == "" {
+			_opts.Host = "localhost"
+		}
 	}
 	if _opts.Port == "" {
 		_opts.Port = viper.GetString("mongo.port")
+		if _opts.Port == "" {
+			_opts.Port = "27017"
+		}
 	}
 	if _opts.Db == "" {
 		_opts.Db = viper.GetString("mongo.db")
+		if _opts.Db == "" {
+			_opts.Db = "admin"
+		}
 	}
 	if len(_opts.Hosts) == 0 {
 		_opts.Hosts = viper.GetStringSlice("mongo.hosts")
@@ -52,6 +56,9 @@ func GetMongoClient(opts ...ClientOption) (c *mongo.Client, err error) {
 	}
 	if _opts.AuthSource == "" {
 		_opts.AuthSource = viper.GetString("mongo.authSource")
+		if _opts.AuthSource == "" {
+			_opts.AuthSource = "admin"
+		}
 	}
 	if _opts.AuthMechanism == "" {
 		_opts.AuthMechanism = viper.GetString("mongo.authMechanism")
