@@ -9,6 +9,10 @@ import (
 type FindResultInterface interface {
 	One(val interface{}) (err error)
 	All(val interface{}) (err error)
+	GetCol() (col *Col)
+	GetSingleResult() (res *mongo.SingleResult)
+	GetCursor() (cur *mongo.Cursor)
+	GetError() (err error)
 }
 
 func NewFindResult() (fr *FindResult) {
@@ -26,6 +30,11 @@ type FindResult struct {
 	res *mongo.SingleResult
 	cur *mongo.Cursor
 	err error
+}
+
+func (fr *FindResult) GetError() (err error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (fr *FindResult) One(val interface{}) (err error) {
@@ -58,4 +67,16 @@ func (fr *FindResult) All(val interface{}) (err error) {
 		return ctx.Err()
 	}
 	return fr.cur.All(ctx, val)
+}
+
+func (fr *FindResult) GetCol() (col *Col) {
+	return fr.col
+}
+
+func (fr *FindResult) GetSingleResult() (res *mongo.SingleResult) {
+	return fr.res
+}
+
+func (fr *FindResult) GetCursor() (cur *mongo.Cursor) {
+	return fr.cur
 }
