@@ -7,6 +7,10 @@ import (
 )
 
 func RunTransaction(fn func(mongo.SessionContext) error) (err error) {
+	return RunTransactionWithContext(context.Background(), fn)
+}
+
+func RunTransactionWithContext(ctx context.Context, fn func(mongo.SessionContext) error) (err error) {
 	// default client
 	c, err := GetMongoClient()
 	if err != nil {
@@ -25,7 +29,7 @@ func RunTransaction(fn func(mongo.SessionContext) error) (err error) {
 	}
 
 	// perform operation
-	if err := mongo.WithSession(context.Background(), s, func(sc mongo.SessionContext) error {
+	if err := mongo.WithSession(ctx, s, func(sc mongo.SessionContext) error {
 		if err := fn(sc); err != nil {
 			return trace.TraceError(err)
 		}
