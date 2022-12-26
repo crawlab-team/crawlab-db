@@ -35,6 +35,7 @@ type ColInterface interface {
 	ListIndexes() (indexes []map[string]interface{}, err error)
 	GetContext() (ctx context.Context)
 	GetName() (name string)
+	GetCollection() (c *mongo.Collection)
 }
 
 type FindOptions struct {
@@ -276,6 +277,10 @@ func (col *Col) GetContext() (ctx context.Context) {
 
 func (col *Col) GetName() (name string) {
 	return col.c.Name()
+}
+
+func (col *Col) GetCollection() (c *mongo.Collection) {
+	return col.c
 }
 
 func GetMongoCol(colName string) (col *Col) {
